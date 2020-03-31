@@ -46,28 +46,21 @@ namespace sprout {
 
 		template<typename Container, typename Cont, typename... Args>
 		inline SPROUT_CONSTEXPR typename std::enable_if<
-			sprout::is_fixed_container<Container>::value,
-			typename sprout::container_construct_traits<Container>::copied_type
-		>::type
-		default_remake_container(Cont&&, typename sprout::container_traits<Container>::difference_type, Args&&... args) {
-			return sprout::container_construct_traits<Container>::make(SPROUT_FORWARD(Args, args)...);
-		}
-		template<typename Container, typename Cont, typename... Args>
-		inline SPROUT_CONSTEXPR typename std::enable_if<
-			!sprout::is_fixed_container<Container>::value
-				&& !(sizeof...(Args) == 2 && sprout::tpp::all_of<sprout::is_input_iterator<typename std::remove_reference<Args>::type>...>::value)
+			sprout::is_fixed_container<Container>::value || 
+				!sprout::tpp::all_of<sprout::is_input_iterator<typename std::remove_reference<Args>::type>...>::value
 				,
 			typename sprout::container_construct_traits<Container>::copied_type
 		>::type
-		default_remake_container(Cont&&, typename sprout::container_traits<Container>::difference_type, Args&&... args) {
+		default_remake_container_two_args(Cont&&, Args&&... args) {
 			return sprout::container_construct_traits<Container>::make(SPROUT_FORWARD(Args, args)...);
 		}
+
 		template<typename Container, typename Cont, typename InputIterator>
 		inline SPROUT_CONSTEXPR typename std::enable_if<
 			!sprout::is_fixed_container<Container>::value,
 			typename sprout::container_construct_traits<Container>::copied_type
 		>::type
-		default_remake_container(Cont&& cont, typename sprout::container_traits<Container>::difference_type, InputIterator first, InputIterator last) {
+		default_remake_container_two_args(Cont&& cont, InputIterator first, InputIterator last) {
 			typedef typename sprout::container_construct_traits<Container>::copied_type copied_type;
 			return copied_type(
 				sprout::make_remake_iterator(
@@ -81,6 +74,24 @@ namespace sprout {
 					sprout::internal_begin_offset_backward(cont), sprout::internal_end_offset_backward(cont)
 					)
 				);
+		}
+		
+		template<typename Container, typename Cont, typename... Args>
+		inline SPROUT_CONSTEXPR typename std::enable_if<
+			sizeof...(Args) == 2,
+			typename sprout::container_construct_traits<Container>::copied_type
+		>::type
+		default_remake_container(Cont&& cont, typename sprout::container_traits<Container>::difference_type, Args&&... args) {
+			return default_remake_container_two_args<Container>(SPROUT_FORWARD(Cont, cont), SPROUT_FORWARD(Args, args)...);
+		}
+		
+		template<typename Container, typename Cont, typename... Args>
+		inline SPROUT_CONSTEXPR typename std::enable_if<
+			sizeof...(Args) != 2,
+			typename sprout::container_construct_traits<Container>::copied_type
+		>::type
+		default_remake_container(Cont&& cont, typename sprout::container_traits<Container>::difference_type, Args&&... args) {
+			return sprout::container_construct_traits<Container>::make(SPROUT_FORWARD(Args, args)...);
 		}
 	}	// namespace detail
 
